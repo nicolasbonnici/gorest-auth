@@ -1,0 +1,17 @@
+database:
+  url: "${DATABASE_URL}"
+
+server:
+  port: 8000
+  host: "0.0.0.0"
+
+plugins:
+  - name: auth
+    enabled: true
+    config:
+      jwt_secret: "${JWT_SECRET}"
+      jwt_ttl: 900  # 15 minutes
+
+migrations:
+  enabled: true
+  auto_migrate: true
