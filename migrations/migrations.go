@@ -2,14 +2,10 @@ package migrations
 
 import (
 	"context"
-	"embed"
 
 	"github.com/nicolasbonnici/gorest/database"
 	"github.com/nicolasbonnici/gorest/migrations"
 )
-
-//go:embed *.sql
-var sqlFiles embed.FS
 
 func GetMigrations() migrations.MigrationSource {
 	builder := migrations.NewMigrationBuilder("gorest-auth")
@@ -100,22 +96,22 @@ func GetMigrations() migrations.MigrationSource {
 		},
 		func(ctx context.Context, db database.Database) error {
 			if db.DriverName() == "postgres" {
-				migrations.SQL(ctx, db, migrations.DialectSQL{
+				_ = migrations.SQL(ctx, db, migrations.DialectSQL{
 					Postgres: `DROP TRIGGER IF EXISTS update_users_updated_at ON users`,
 				})
-				migrations.SQL(ctx, db, migrations.DialectSQL{
+				_ = migrations.SQL(ctx, db, migrations.DialectSQL{
 					Postgres: `DROP FUNCTION IF EXISTS update_updated_at_column()`,
 				})
-				migrations.DropIndex(ctx, db, "idx_users_email", "users")
-				migrations.DropIndex(ctx, db, "idx_users_deleted_at", "users")
+				_ = migrations.DropIndex(ctx, db, "idx_users_email", "users")
+				_ = migrations.DropIndex(ctx, db, "idx_users_deleted_at", "users")
 			}
 
 			if db.DriverName() == "sqlite" {
-				migrations.SQL(ctx, db, migrations.DialectSQL{
+				_ = migrations.SQL(ctx, db, migrations.DialectSQL{
 					SQLite: `DROP TRIGGER IF EXISTS update_users_updated_at`,
 				})
-				migrations.DropIndex(ctx, db, "idx_users_email", "users")
-				migrations.DropIndex(ctx, db, "idx_users_deleted_at", "users")
+				_ = migrations.DropIndex(ctx, db, "idx_users_email", "users")
+				_ = migrations.DropIndex(ctx, db, "idx_users_deleted_at", "users")
 			}
 
 			return migrations.DropTableIfExists(ctx, db, "users")

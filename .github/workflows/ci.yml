@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gorest dependency
+        uses: actions/checkout@v4
+        with:
+          repository: nicolasbonnici/gorest
+          path: gorest
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: go/gorest-auth
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+      - name: Run golangci-lint
+        run: golangci-lint run
+        working-directory: go/gorest-auth
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gorest dependency
+        uses: actions/checkout@v4
+        with:
+          repository: nicolasbonnici/gorest
+          path: gorest
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: go/gorest-auth
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+
+      - name: Download dependencies
+        run: go mod download
+        working-directory: go/gorest-auth
+
+      - name: Run tests with coverage
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+        working-directory: go/gorest-auth
+
+      - name: Display coverage
+        run: go tool cover -func=coverage.out
+        working-directory: go/gorest-auth
+
+      - name: Cleanup
+        if: always()
+        run: |
+          go clean -cache -testcache -modcache
+          rm -f coverage.out
+        working-directory: go/gorest-auth
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [lint, test]
+    steps:
+      - name: Checkout gorest dependency
+        uses: actions/checkout@v4
+        with:
+          repository: nicolasbonnici/gorest
+          path: gorest
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: go/gorest-auth
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+
+      - name: Build verification
+        run: go build -v ./...
+        working-directory: go/gorest-auth
+
+      - name: Cleanup
+        if: always()
+        run: go clean -cache -testcache -modcache
+        working-directory: go/gorest-auth
