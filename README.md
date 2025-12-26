@@ -1,5 +1,9 @@
 # GoREST Auth Plugin
 
+[![CI](https://github.com/nicolasbonnici/gorest-auth/actions/workflows/ci.yml/badge.svg)](https://github.com/nicolasbonnici/gorest-auth/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nicolasbonnici/gorest-auth)](https://goreportcard.com/report/github.com/nicolasbonnici/gorest-auth)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A production-ready JWT-based authentication plugin for GoREST 0.4+ with built-in user management, bcrypt password hashing, and automatic migration support.
 
 ## Features
