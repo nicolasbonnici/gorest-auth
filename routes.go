@@ -16,9 +16,10 @@ type LoginRequest struct {
 }
 
 type RegisterRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8"`
-	Name     string `json:"name"`
+	Email     string `json:"email" validate:"required,email"`
+	Password  string `json:"password" validate:"required,min=8"`
+	Firstname string `json:"firstname" validate:"required"`
+	Lastname  string `json:"lastname" validate:"required"`
 }
 
 type AuthResponse struct {
@@ -40,7 +41,7 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 		ctx := c.Context()
 
 		var existingEmail string
-		err := db.QueryRow(ctx, "SELECT email FROM users WHERE email = $1 AND deleted_at IS NULL", req.Email).Scan(&existingEmail)
+		err := db.QueryRow(ctx, "SELECT email FROM users WHERE email = $1", req.Email).Scan(&existingEmail)
 		if err == nil {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 				"error": "user with this email already exists",
@@ -52,13 +53,14 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 			})
 		}
 
+		password := req.Password
 		user := &models.User{
 			ID:        uuid.New(),
 			Email:     req.Email,
-			Password:  req.Password,
-			Name:      req.Name,
+			Password:  &password,
+			Firstname: req.Firstname,
+			Lastname:  req.Lastname,
 			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
 		}
 
 		if err := user.HashPassword(); err != nil {
@@ -67,8 +69,8 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 			})
 		}
 
-		_, err = db.Exec(ctx, "INSERT INTO users (id, email, password, name, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)",
-			user.ID, user.Email, user.Password, user.Name, user.CreatedAt, user.UpdatedAt)
+		_, err = db.Exec(ctx, "INSERT INTO users (id, firstname, lastname, email, password, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+			user.ID, user.Firstname, user.Lastname, user.Email, user.Password, user.CreatedAt)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "failed to create user",
@@ -99,9 +101,10 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 		ctx := c.Context()
 
 		var user models.User
-		var deletedAt sql.NullTime
-		err := db.QueryRow(ctx, "SELECT id, email, password, name, created_at, updated_at, deleted_at FROM users WHERE email = $1", req.Email).
-			Scan(&user.ID, &user.Email, &user.Password, &user.Name, &user.CreatedAt, &user.UpdatedAt, &deletedAt)
+		var password sql.NullString
+		var updatedAt sql.NullTime
+		err := db.QueryRow(ctx, "SELECT id, firstname, lastname, email, password, created_at, updated_at FROM users WHERE email = $1", req.Email).
+			Scan(&user.ID, &user.Firstname, &user.Lastname, &user.Email, &password, &user.CreatedAt, &updatedAt)
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "invalid email or password",
@@ -113,10 +116,11 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 			})
 		}
 
-		if deletedAt.Valid {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "invalid email or password",
-			})
+		if password.Valid {
+			user.Password = &password.String
+		}
+		if updatedAt.Valid {
+			user.UpdatedAt = &updatedAt.Time
 		}
 
 		if !user.CheckPassword(req.Password) {

@@ -9,12 +9,12 @@ import (
 
 type User struct {
 	ID        uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	Firstname string     `json:"firstname" gorm:"not null"`
+	Lastname  string     `json:"lastname" gorm:"not null"`
 	Email     string     `json:"email" gorm:"uniqueIndex;not null"`
-	Password  string     `json:"-" gorm:"not null"`
-	Name      string     `json:"name"`
+	Password  *string    `json:"-"`
 	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at,omitempty" gorm:"index"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
 
 func (User) TableName() string {
@@ -22,20 +22,24 @@ func (User) TableName() string {
 }
 
 func (u *User) HashPassword() error {
-	if u.Password == "" {
+	if u.Password == nil || *u.Password == "" {
 		return nil
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*u.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 
-	u.Password = string(hashedPassword)
+	hashedStr := string(hashedPassword)
+	u.Password = &hashedStr
 	return nil
 }
 
 func (u *User) CheckPassword(password string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+	if u.Password == nil {
+		return false
+	}
+	err := bcrypt.CompareHashAndPassword([]byte(*u.Password), []byte(password))
 	return err == nil
 }
