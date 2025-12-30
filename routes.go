@@ -1,11 +1,12 @@
 package auth
 
 import (
-	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/nicolasbonnici/gorest-auth/models"
 	"github.com/nicolasbonnici/gorest/database"
 )
@@ -47,7 +48,7 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 				"error": "user with this email already exists",
 			})
 		}
-		if err != nil && err != sql.ErrNoRows {
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "failed to check existing user",
 			})
@@ -101,11 +102,11 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 		ctx := c.Context()
 
 		var user models.User
-		var password sql.NullString
-		var updatedAt sql.NullTime
+		var password *string
+		var updatedAt *time.Time
 		err := db.QueryRow(ctx, "SELECT id, firstname, lastname, email, password, created_at, updated_at FROM users WHERE email = $1", req.Email).
 			Scan(&user.ID, &user.Firstname, &user.Lastname, &user.Email, &password, &user.CreatedAt, &updatedAt)
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "invalid email or password",
 			})
@@ -116,12 +117,8 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 			})
 		}
 
-		if password.Valid {
-			user.Password = &password.String
-		}
-		if updatedAt.Valid {
-			user.UpdatedAt = &updatedAt.Time
-		}
+		user.Password = password
+		user.UpdatedAt = updatedAt
 
 		if !user.CheckPassword(req.Password) {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
