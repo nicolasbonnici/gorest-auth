@@ -6,8 +6,8 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.10
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.7.6
-	github.com/nicolasbonnici/gorest v0.4.1
+	github.com/jackc/pgx/v5 v5.8.0
+	github.com/nicolasbonnici/gorest v0.4.2
 	golang.org/x/crypto v0.46.0
 )
 
