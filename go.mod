@@ -7,7 +7,11 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
+<<<<<<< Updated upstream
 	github.com/nicolasbonnici/gorest v0.4.5
+=======
+	github.com/nicolasbonnici/gorest v0.4.7
+>>>>>>> Stashed changes
 	golang.org/x/crypto v0.46.0
 )
 
