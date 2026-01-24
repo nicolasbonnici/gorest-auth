@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/nicolasbonnici/gorest-auth/middleware"
 	authmigrations "github.com/nicolasbonnici/gorest-auth/migrations"
+	"github.com/nicolasbonnici/gorest-auth/models"
 	"github.com/nicolasbonnici/gorest/database"
 	"github.com/nicolasbonnici/gorest/plugin"
 )
@@ -62,4 +63,17 @@ func (p *AuthPlugin) MigrationSource() interface{} {
 
 func (p *AuthPlugin) MigrationDependencies() []string {
 	return []string{}
+}
+
+func (p *AuthPlugin) GetOpenAPIResources() []plugin.OpenAPIResource {
+	return []plugin.OpenAPIResource{{
+		Name:          "user",
+		PluralName:    "users",
+		BasePath:      "/users",
+		Tags:          []string{"Users"},
+		ResponseModel: models.User{},
+		CreateModel:   RegisterRequest{},
+		UpdateModel:   UpdateUserRequest{},
+		Description:   "User management and authentication",
+	}}
 }

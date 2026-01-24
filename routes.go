@@ -23,6 +23,13 @@ type RegisterRequest struct {
 	Lastname  string `json:"lastname" validate:"required"`
 }
 
+type UpdateUserRequest struct {
+	Email     *string `json:"email,omitempty" validate:"omitempty,email"`
+	Password  *string `json:"password,omitempty" validate:"omitempty,min=8"`
+	Firstname *string `json:"firstname,omitempty"`
+	Lastname  *string `json:"lastname,omitempty"`
+}
+
 type AuthResponse struct {
 	Token string       `json:"token"`
 	User  *models.User `json:"user"`
