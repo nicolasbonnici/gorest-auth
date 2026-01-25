@@ -11,6 +11,7 @@ import (
 	"github.com/nicolasbonnici/gorest/crud"
 	"github.com/nicolasbonnici/gorest/database"
 	"github.com/nicolasbonnici/gorest/query"
+	"github.com/nicolasbonnici/gorest/response"
 )
 
 type LoginRequest struct {
@@ -44,9 +45,7 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 	authGroup.Post("/register", func(c *fiber.Ctx) error {
 		var req RegisterRequest
 		if err := c.BodyParser(&req); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "invalid request body",
-			})
+			return response.SendError(c, fiber.StatusBadRequest, "invalid request body")
 		}
 
 		ctx := c.Context()
@@ -58,22 +57,16 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 
 		queryStr, args, err := qb.Build()
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "failed to build query",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "failed to build query")
 		}
 
 		var existingEmail string
 		err = db.QueryRow(ctx, queryStr, args...).Scan(&existingEmail)
 		if err == nil {
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
-				"error": "user with this email already exists",
-			})
+			return response.SendError(c, fiber.StatusConflict, "user with this email already exists")
 		}
 		if !crud.IsNotFoundError(err) {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "failed to check existing user",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "failed to check existing user")
 		}
 
 		password := req.Password
@@ -87,25 +80,19 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 		}
 
 		if err := user.HashPassword(); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "failed to hash password",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "failed to hash password")
 		}
 
 		if err := userCRUD.Create(ctx, user); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "failed to create user",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "failed to create user")
 		}
 
 		token, err := jwt.GenerateToken(user.ID.String())
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "failed to generate token",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "failed to generate token")
 		}
 
-		return c.Status(fiber.StatusCreated).JSON(AuthResponse{
+		return response.SendCreated(c, AuthResponse{
 			Token: token,
 			User:  &user,
 		})
@@ -114,9 +101,7 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 	authGroup.Post("/login", func(c *fiber.Ctx) error {
 		var req LoginRequest
 		if err := c.BodyParser(&req); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "invalid request body",
-			})
+			return response.SendError(c, fiber.StatusBadRequest, "invalid request body")
 		}
 
 		ctx := c.Context()
@@ -128,9 +113,7 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 
 		queryStr, args, err := qb.Build()
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "failed to build query",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "failed to build query")
 		}
 
 		var user models.User
@@ -139,33 +122,25 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 		err = db.QueryRow(ctx, queryStr, args...).
 			Scan(&user.ID, &user.Firstname, &user.Lastname, &user.Email, &password, &user.CreatedAt, &updatedAt)
 		if crud.IsNotFoundError(err) {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "invalid email or password",
-			})
+			return response.SendError(c, fiber.StatusUnauthorized, "invalid email or password")
 		}
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "database error",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "database error")
 		}
 
 		user.Password = password
 		user.UpdatedAt = updatedAt
 
 		if !user.CheckPassword(req.Password) {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "invalid email or password",
-			})
+			return response.SendError(c, fiber.StatusUnauthorized, "invalid email or password")
 		}
 
 		token, err := jwt.GenerateToken(user.ID.String())
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "failed to generate token",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "failed to generate token")
 		}
 
-		return c.JSON(AuthResponse{
+		return response.SendFormatted(c, fiber.StatusOK, AuthResponse{
 			Token: token,
 			User:  &user,
 		})
@@ -178,19 +153,15 @@ func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 
 		var req RefreshRequest
 		if err := c.BodyParser(&req); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "invalid request body",
-			})
+			return response.SendError(c, fiber.StatusBadRequest, "invalid request body")
 		}
 
 		newToken, err := jwt.RefreshToken(req.Token)
 		if err != nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "invalid or expired token",
-			})
+			return response.SendError(c, fiber.StatusUnauthorized, "invalid or expired token")
 		}
 
-		return c.JSON(fiber.Map{
+		return response.SendFormatted(c, fiber.StatusOK, fiber.Map{
 			"token": newToken,
 		})
 	})
@@ -200,7 +171,7 @@ func RegisterUserRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 	authMiddleware := middleware.NewAuthMiddleware(jwt)
 	userCRUD := crud.New[models.User](db)
 
-	app.Get("/users", func(c *fiber.Ctx) error {
+	app.Get("/users", authMiddleware, func(c *fiber.Ctx) error {
 		limit := 10
 		if l := c.QueryInt("limit", 10); l > 0 && l <= 100 {
 			limit = l
@@ -222,9 +193,7 @@ func RegisterUserRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 			},
 		})
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "failed to fetch users",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "failed to fetch users")
 		}
 
 		users := make([]*models.User, len(result.Items))
@@ -237,7 +206,7 @@ func RegisterUserRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 			total = int64(*result.Total)
 		}
 
-		return c.JSON(fiber.Map{
+		return response.SendFormatted(c, fiber.StatusOK, fiber.Map{
 			"data":  users,
 			"total": total,
 			"page":  page,
@@ -245,73 +214,55 @@ func RegisterUserRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 		})
 	})
 
-	app.Get("/users/:id", func(c *fiber.Ctx) error {
+	app.Get("/users/:id", authMiddleware, func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		userID, err := uuid.Parse(id)
 		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "invalid user id",
-			})
+			return response.SendError(c, fiber.StatusBadRequest, "invalid user id")
 		}
 
 		ctx := c.Context()
 
 		user, err := userCRUD.GetByID(ctx, userID)
 		if crud.IsNotFoundError(err) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "user not found",
-			})
+			return response.SendError(c, fiber.StatusNotFound, "user not found")
 		}
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "database error",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "database error")
 		}
 
-		return c.JSON(user)
+		return response.SendFormatted(c, fiber.StatusOK, user)
 	})
 
 	app.Put("/users/:id", authMiddleware, func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		userID, err := uuid.Parse(id)
 		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "invalid user id",
-			})
+			return response.SendError(c, fiber.StatusBadRequest, "invalid user id")
 		}
 
 		authenticatedUserID, ok := context.GetUserID(c)
 		if !ok {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "unauthorized",
-			})
+			return response.SendError(c, fiber.StatusUnauthorized, "unauthorized")
 		}
 
 		if authenticatedUserID != userID.String() {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"error": "you can only update your own account",
-			})
+			return response.SendError(c, fiber.StatusForbidden, "you can only update your own account")
 		}
 
 		var req UpdateUserRequest
 		if err := c.BodyParser(&req); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "invalid request body",
-			})
+			return response.SendError(c, fiber.StatusBadRequest, "invalid request body")
 		}
 
 		ctx := c.Context()
 
 		user, err := userCRUD.GetByID(ctx, userID)
 		if crud.IsNotFoundError(err) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "user not found",
-			})
+			return response.SendError(c, fiber.StatusNotFound, "user not found")
 		}
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "database error",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "database error")
 		}
 
 		if req.Email != nil {
@@ -325,22 +276,16 @@ func RegisterUserRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 
 			queryStr, args, err := qb.Build()
 			if err != nil {
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "failed to build query",
-				})
+				return response.SendError(c, fiber.StatusInternalServerError, "failed to build query")
 			}
 
 			var existingEmail string
 			err = db.QueryRow(ctx, queryStr, args...).Scan(&existingEmail)
 			if err == nil {
-				return c.Status(fiber.StatusConflict).JSON(fiber.Map{
-					"error": "email already in use",
-				})
+				return response.SendError(c, fiber.StatusConflict, "email already in use")
 			}
 			if !crud.IsNotFoundError(err) {
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "failed to check existing email",
-				})
+				return response.SendError(c, fiber.StatusInternalServerError, "failed to check existing email")
 			}
 			user.Email = *req.Email
 		}
@@ -356,9 +301,7 @@ func RegisterUserRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 		if req.Password != nil {
 			user.Password = req.Password
 			if err := user.HashPassword(); err != nil {
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "failed to hash password",
-				})
+				return response.SendError(c, fiber.StatusInternalServerError, "failed to hash password")
 			}
 		}
 
@@ -366,56 +309,42 @@ func RegisterUserRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 		user.UpdatedAt = &now
 
 		if err := userCRUD.Update(ctx, userID, *user); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "failed to update user",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "failed to update user")
 		}
 
 		user.Password = nil
 
-		return c.JSON(user)
+		return response.SendFormatted(c, fiber.StatusOK, user)
 	})
 
 	app.Delete("/users/:id", authMiddleware, func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		userID, err := uuid.Parse(id)
 		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "invalid user id",
-			})
+			return response.SendError(c, fiber.StatusBadRequest, "invalid user id")
 		}
 
 		authenticatedUserID, ok := context.GetUserID(c)
 		if !ok {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "unauthorized",
-			})
+			return response.SendError(c, fiber.StatusUnauthorized, "unauthorized")
 		}
 
 		if authenticatedUserID != userID.String() {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"error": "you can only delete your own account",
-			})
+			return response.SendError(c, fiber.StatusForbidden, "you can only delete your own account")
 		}
 
 		ctx := c.Context()
 
 		_, err = userCRUD.GetByID(ctx, userID)
 		if crud.IsNotFoundError(err) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "user not found",
-			})
+			return response.SendError(c, fiber.StatusNotFound, "user not found")
 		}
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "database error",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "database error")
 		}
 
 		if err := userCRUD.Delete(ctx, userID); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "failed to delete user",
-			})
+			return response.SendError(c, fiber.StatusInternalServerError, "failed to delete user")
 		}
 
 		return c.SendStatus(fiber.StatusNoContent)
