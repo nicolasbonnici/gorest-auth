@@ -54,6 +54,7 @@ func (p *AuthPlugin) SetupEndpoints(app *fiber.App) error {
 	}
 
 	RegisterAuthRoutes(app, p.db, p.jwt)
+	RegisterUserRoutes(app, p.db, p.jwt)
 	return nil
 }
 
