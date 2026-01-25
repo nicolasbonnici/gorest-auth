@@ -10,6 +10,7 @@ import (
 	"github.com/nicolasbonnici/gorest-auth/models"
 	"github.com/nicolasbonnici/gorest/crud"
 	"github.com/nicolasbonnici/gorest/database"
+	"github.com/nicolasbonnici/gorest/pagination"
 	"github.com/nicolasbonnici/gorest/query"
 	"github.com/nicolasbonnici/gorest/response"
 )
@@ -172,14 +173,11 @@ func RegisterUserRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 	userCRUD := crud.New[models.User](db)
 
 	app.Get("/users", authMiddleware, func(c *fiber.Ctx) error {
-		limit := 10
-		if l := c.QueryInt("limit", 10); l > 0 && l <= 100 {
-			limit = l
-		}
-		page := c.QueryInt("page", 1)
-		if page < 1 {
-			page = 1
-		}
+		const defaultLimit = 10
+		const maxLimit = 100
+
+		limit := pagination.ParseIntQuery(c, "limit", defaultLimit, maxLimit)
+		page := max(1, pagination.ParseIntQuery(c, "page", 1, 1000))
 		offset := (page - 1) * limit
 
 		ctx := c.Context()
@@ -193,25 +191,10 @@ func RegisterUserRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 			},
 		})
 		if err != nil {
-			return response.SendError(c, fiber.StatusInternalServerError, "failed to fetch users")
+			return pagination.SendPaginatedError(c, fiber.StatusInternalServerError, "failed to fetch users")
 		}
 
-		users := make([]*models.User, len(result.Items))
-		for i := range result.Items {
-			users[i] = &result.Items[i]
-		}
-
-		total := int64(0)
-		if result.Total != nil {
-			total = int64(*result.Total)
-		}
-
-		return response.SendFormatted(c, fiber.StatusOK, fiber.Map{
-			"data":  users,
-			"total": total,
-			"page":  page,
-			"limit": limit,
-		})
+		return pagination.SendHydraCollection(c, result.Items, result.Total, limit, page, defaultLimit)
 	})
 
 	app.Get("/users/:id", authMiddleware, func(c *fiber.Ctx) error {
