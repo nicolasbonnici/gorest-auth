@@ -13,7 +13,7 @@ type AuthenticatedUser struct {
 
 // This is a compatibility function for the codegen
 func Context(c *fiber.Ctx) context.Context {
-	return c.Context()
+	return c.UserContext()
 }
 
 // This is a compatibility function for the codegen
