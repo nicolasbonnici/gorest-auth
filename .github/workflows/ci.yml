@@ -43,7 +43,7 @@ jobs:
         run: staticcheck $(go list ./... | grep -v '/vendor/' | grep -v '/generated/')
 
       - name: Run ineffassign
-        run: ineffassign $(find . -type f -name '*.go' ! -path "./vendor/*" ! -path "./generated/*")
+        run: ineffassign ./...
 
       - name: Run misspell
         run: misspell -error $(find . -type f -name '*.go' ! -path "./vendor/*" ! -path "./generated/*")
@@ -54,33 +54,20 @@ jobs:
       - name: Run gocyclo (complexity threshold 15)
         run: gocyclo -over 15 $(find . -type f -name '*.go' ! -path "./vendor/*" ! -path "./generated/*")
 
+      - name: Run golangci-lint
+        run: |
+          echo "Running golangci-lint comprehensive checks..."
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          golangci-lint run
+
       - name: Cleanup
         if: always()
         run: go clean -cache -testcache -modcache
 
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    needs: quality
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 'stable'
-
-      - name: Install golangci-lint
-        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
-      - name: Run golangci-lint
-        run: golangci-lint run
-
   test:
     name: Test
     runs-on: ubuntu-latest
-    needs: [quality, lint]
+    needs: quality
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -104,7 +91,7 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [quality, lint, test]
+    needs: [quality, test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
