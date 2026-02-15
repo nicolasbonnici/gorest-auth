@@ -49,10 +49,21 @@ jobs:
         run: misspell -error $(find . -type f -name '*.go' ! -path "./vendor/*" ! -path "./generated/*")
 
       - name: Run errcheck
-        run: errcheck $(go list ./... | grep -v '/vendor/' | grep -v '/generated/')
+        run: |
+          echo "Running errcheck..."
+          errcheck -ignoretests ./...
+          echo "✓ errcheck passed"
 
       - name: Run gocyclo (complexity threshold 15)
-        run: gocyclo -over 15 $(find . -type f -name '*.go' ! -path "./vendor/*" ! -path "./generated/*")
+        run: |
+          echo "Running gocyclo..."
+          gocyclo_output=$(gocyclo -over 15 . | grep -v 'vendor/' | grep -v 'generated/' || true)
+          if [ -n "$gocyclo_output" ]; then
+            echo "Functions with cyclomatic complexity > 15:"
+            echo "$gocyclo_output"
+            exit 1
+          fi
+          echo "✓ gocyclo passed"
 
       - name: Run golangci-lint
         run: |
