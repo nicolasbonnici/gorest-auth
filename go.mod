@@ -8,7 +8,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.11
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
-	github.com/nicolasbonnici/gorest v0.4.9
+	github.com/nicolasbonnici/gorest v0.4.10
 	golang.org/x/crypto v0.48.0
 )
 
@@ -27,8 +27,6 @@ require (
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.69.0 // indirect
-	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
-	modernc.org/libc v1.67.7 // indirect
 )
