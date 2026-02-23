@@ -2,6 +2,7 @@ package auth
 
 import (
 	stdcontext "context"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -156,19 +157,19 @@ func checkEmailExists(ctx stdcontext.Context, db database.Database, email string
 
 	queryStr, args, err := qb.Build()
 	if err != nil {
-		return response.SendError(nil, fiber.StatusInternalServerError, "failed to build query")
+		return fmt.Errorf("failed to build query: %w", err)
 	}
 
 	var existingEmail string
 	err = db.QueryRow(ctx, queryStr, args...).Scan(&existingEmail)
 	if err == nil {
 		if excludeUserID == uuid.Nil {
-			return response.SendError(nil, fiber.StatusConflict, "user with this email already exists")
+			return fmt.Errorf("user with this email already exists")
 		}
-		return response.SendError(nil, fiber.StatusConflict, "email already in use")
+		return fmt.Errorf("email already in use")
 	}
 	if !crud.IsNotFoundError(err) {
-		return response.SendError(nil, fiber.StatusInternalServerError, "failed to check existing email")
+		return fmt.Errorf("failed to check existing email: %w", err)
 	}
 
 	return nil
@@ -182,7 +183,7 @@ func getUserByEmail(ctx stdcontext.Context, db database.Database, email string) 
 
 	queryStr, args, err := qb.Build()
 	if err != nil {
-		return nil, response.SendError(nil, fiber.StatusInternalServerError, "failed to build query")
+		return nil, fmt.Errorf("failed to build query: %w", err)
 	}
 
 	var user models.User
@@ -191,10 +192,10 @@ func getUserByEmail(ctx stdcontext.Context, db database.Database, email string) 
 	err = db.QueryRow(ctx, queryStr, args...).
 		Scan(&user.ID, &user.Firstname, &user.Lastname, &user.Email, &password, &user.CreatedAt, &updatedAt)
 	if crud.IsNotFoundError(err) {
-		return nil, response.SendError(nil, fiber.StatusUnauthorized, "invalid email or password")
+		return nil, fmt.Errorf("invalid email or password")
 	}
 	if err != nil {
-		return nil, response.SendError(nil, fiber.StatusInternalServerError, "database error")
+		return nil, fmt.Errorf("database error: %w", err)
 	}
 
 	user.Password = password
@@ -374,7 +375,7 @@ func updateUserFields(ctx stdcontext.Context, db database.Database, user *models
 	if req.Password != nil {
 		user.Password = req.Password
 		if err := user.HashPassword(); err != nil {
-			return response.SendError(nil, fiber.StatusInternalServerError, "failed to hash password")
+			return fmt.Errorf("failed to hash password: %w", err)
 		}
 	}
 
