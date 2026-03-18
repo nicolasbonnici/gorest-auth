@@ -72,9 +72,9 @@ func (r *UserResource) GetAll(c *fiber.Ctx) error {
 	includeCount := c.Query("count", "true") != "false"
 
 	queryParams := make(url.Values)
-	c.Context().QueryArgs().VisitAll(func(key, value []byte) {
+	for key, value := range c.Context().QueryArgs().All() {
 		queryParams.Add(string(key), string(value))
-	})
+	}
 
 	fieldMap := map[string]string{
 		"id":         "id",
