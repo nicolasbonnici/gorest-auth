@@ -200,4 +200,3 @@ func getUserByEmail(ctx stdcontext.Context, db database.Database, email string) 
 
 	return &user, nil
 }
-
