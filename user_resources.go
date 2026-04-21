@@ -25,7 +25,7 @@ type UserResource struct {
 	converter *converters.UserConverter
 }
 
-func RegisterUserRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
+func RegisterUserRoutes(router fiber.Router, db database.Database, jwt *JWTService) {
 	authMiddleware := middleware.NewAuthMiddleware(jwt)
 
 	resource := &UserResource{
@@ -35,10 +35,10 @@ func RegisterUserRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
 		converter: &converters.UserConverter{},
 	}
 
-	app.Get("/users", authMiddleware, resource.GetAll)
-	app.Get("/users/:id", authMiddleware, resource.GetByID)
-	app.Put("/users/:id", authMiddleware, resource.Update)
-	app.Delete("/users/:id", authMiddleware, resource.Delete)
+	router.Get("/users", authMiddleware, resource.GetAll)
+	router.Get("/users/:id", authMiddleware, resource.GetByID)
+	router.Put("/users/:id", authMiddleware, resource.Update)
+	router.Delete("/users/:id", authMiddleware, resource.Delete)
 }
 
 func (r *UserResource) GetByID(c *fiber.Ctx) error {

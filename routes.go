@@ -38,8 +38,8 @@ type AuthResponse struct {
 	User  *models.User `json:"user"`
 }
 
-func RegisterAuthRoutes(app *fiber.App, db database.Database, jwt *JWTService) {
-	authGroup := app.Group("/auth")
+func RegisterAuthRoutes(router fiber.Router, db database.Database, jwt *JWTService) {
+	authGroup := router.Group("/auth")
 	userCRUD := crud.New[models.User](db)
 
 	authGroup.Post("/register", handleRegister(db, userCRUD, jwt))

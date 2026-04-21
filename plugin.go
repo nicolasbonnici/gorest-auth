@@ -48,13 +48,13 @@ func (p *AuthPlugin) Handler() fiber.Handler {
 	return middleware.NewAuthMiddleware(p.jwt)
 }
 
-func (p *AuthPlugin) SetupEndpoints(app *fiber.App) error {
+func (p *AuthPlugin) SetupEndpoints(router fiber.Router) error {
 	if p.db == nil {
 		return nil
 	}
 
-	RegisterAuthRoutes(app, p.db, p.jwt)
-	RegisterUserRoutes(app, p.db, p.jwt)
+	RegisterAuthRoutes(router, p.db, p.jwt)
+	RegisterUserRoutes(router, p.db, p.jwt)
 	return nil
 }
 
