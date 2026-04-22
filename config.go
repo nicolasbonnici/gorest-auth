@@ -1,6 +1,9 @@
 package auth
 
-import "github.com/nicolasbonnici/gorest/database"
+import (
+	"github.com/nicolasbonnici/gorest/database"
+	"github.com/nicolasbonnici/gorest/rbac"
+)
 
 type Config struct {
 	Database  database.Database
@@ -11,5 +14,19 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		JWTTTL: 900,
+	}
+}
+
+func GetRBACConfig() rbac.Config {
+	return rbac.Config{
+		DefaultPolicy:      rbac.DenyAll,
+		SuperuserRole:      "admin",
+		DefaultFieldPolicy: "deny",
+		StrictValidation:   false,
+		CacheEnabled:       true,
+		CacheTTL:           300,
+		RoleHierarchy: map[string][]string{
+			"admin": {"user"},
+		},
 	}
 }

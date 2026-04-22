@@ -45,7 +45,7 @@ func (p *AuthPlugin) Initialize(config map[string]interface{}) error {
 }
 
 func (p *AuthPlugin) Handler() fiber.Handler {
-	return middleware.NewAuthMiddleware(p.jwt)
+	return middleware.AuthMiddleware(p.jwt, p.db)
 }
 
 func (p *AuthPlugin) SetupEndpoints(router fiber.Router) error {

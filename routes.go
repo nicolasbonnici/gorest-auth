@@ -67,6 +67,7 @@ func handleRegister(db database.Database, userCRUD *crud.CRUD[models.User], jwt 
 			Password:  &password,
 			Firstname: req.Firstname,
 			Lastname:  req.Lastname,
+			Role:      "user",
 			CreatedAt: time.Now(),
 		}
 
@@ -174,7 +175,7 @@ func checkEmailExists(ctx stdcontext.Context, db database.Database, email string
 
 func getUserByEmail(ctx stdcontext.Context, db database.Database, email string) (*models.User, error) {
 	qb := query.New(db.Dialect()).
-		Select("id", "firstname", "lastname", "email", "password", "created_at", "updated_at").
+		Select("id", "firstname", "lastname", "email", "password", "role", "created_at", "updated_at").
 		From("users").
 		Where(query.Eq("email", email))
 
@@ -187,7 +188,7 @@ func getUserByEmail(ctx stdcontext.Context, db database.Database, email string) 
 	var password *string
 	var updatedAt *time.Time
 	err = db.QueryRow(ctx, queryStr, args...).
-		Scan(&user.ID, &user.Firstname, &user.Lastname, &user.Email, &password, &user.CreatedAt, &updatedAt)
+		Scan(&user.ID, &user.Firstname, &user.Lastname, &user.Email, &password, &user.Role, &user.CreatedAt, &updatedAt)
 	if crud.IsNotFoundError(err) {
 		return nil, fmt.Errorf("invalid email or password")
 	}
