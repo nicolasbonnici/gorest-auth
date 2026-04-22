@@ -8,13 +8,14 @@ import (
 )
 
 type User struct {
-	ID        uuid.UUID  `json:"id" db:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	Firstname string     `json:"firstname" db:"firstname" gorm:"not null"`
-	Lastname  string     `json:"lastname" db:"lastname" gorm:"not null"`
-	Email     string     `json:"email" db:"email" gorm:"uniqueIndex;not null"`
-	Password  *string    `json:"-" db:"password"`
-	CreatedAt time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt *time.Time `json:"updated_at,omitempty" db:"updated_at"`
+	ID        uuid.UUID  `json:"id" db:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()" rbac:"read:*;write:*"`
+	Firstname string     `json:"firstname" db:"firstname" gorm:"not null" rbac:"read:*;write:any"`
+	Lastname  string     `json:"lastname" db:"lastname" gorm:"not null" rbac:"read:*;write:any"`
+	Email     string     `json:"email" db:"email" gorm:"uniqueIndex;not null" rbac:"read:*;write:any"`
+	Password  *string    `json:"-" db:"password" rbac:"read:none;write:any"`
+	Role      string     `json:"role" db:"role" gorm:"not null;default:'user'" rbac:"read:*;write:admin"`
+	CreatedAt time.Time  `json:"created_at" db:"created_at" rbac:"read:*;write:none"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty" db:"updated_at" rbac:"read:*;write:none"`
 }
 
 func (User) TableName() string {

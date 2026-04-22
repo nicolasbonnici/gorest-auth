@@ -26,29 +26,28 @@ type UserResource struct {
 }
 
 func RegisterUserRoutes(router fiber.Router, db database.Database, jwt *JWTService) {
-	authMiddleware := middleware.NewAuthMiddleware(jwt)
+	authMiddleware := middleware.AuthMiddleware(jwt, db)
+	optionalAuth := middleware.NewOptionalAuthMiddleware(jwt, db)
+
+	rbacConfig := GetRBACConfig()
+	userHooks := hooks.NewUserHooks(db, rbacConfig)
 
 	resource := &UserResource{
 		db:        db,
-		crud:      crud.New[models.User](db),
-		hooks:     hooks.NewUserHooks(db),
+		crud:      crud.NewWithHooks[models.User](db, userHooks),
+		hooks:     userHooks,
 		converter: &converters.UserConverter{},
 	}
 
-	router.Get("/users", authMiddleware, resource.GetAll)
-	router.Get("/users/:id", authMiddleware, resource.GetByID)
+	router.Get("/users", optionalAuth, resource.GetAll)
+	router.Get("/users/:id", optionalAuth, resource.GetByID)
 	router.Put("/users/:id", authMiddleware, resource.Update)
-	router.Delete("/users/:id", authMiddleware, resource.Delete)
 }
 
 func (r *UserResource) GetByID(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.SendError(c, fiber.StatusBadRequest, "invalid user ID")
-	}
-
-	if err := r.hooks.GetByIDHook(c, id); err != nil {
-		return err
 	}
 
 	user, err := r.crud.GetByID(c.Context(), id)
@@ -107,10 +106,6 @@ func (r *UserResource) GetAll(c *fiber.Ctx) error {
 		}
 	}
 
-	if err := r.hooks.GetAllHook(c, &conditions, &orderBy); err != nil {
-		return err
-	}
-
 	result, err := r.crud.GetAllPaginated(c.Context(), crud.PaginationOptions{
 		Limit:        limit,
 		Offset:       offset,
@@ -135,10 +130,6 @@ func (r *UserResource) Update(c *fiber.Ctx) error {
 
 	model := r.converter.UpdateDTOToModel(dto)
 
-	if err := r.hooks.UpdateHook(c, dto, &model); err != nil {
-		return err
-	}
-
 	if err := r.crud.Update(c.Context(), id, model); err != nil {
 		if crud.IsNotFoundError(err) {
 			return response.SendError(c, fiber.StatusNotFound, "user not found")
@@ -148,21 +139,4 @@ func (r *UserResource) Update(c *fiber.Ctx) error {
 
 	dto2 := r.converter.ModelToResponseDTO(model)
 	return response.SendFormatted(c, fiber.StatusOK, dto2)
-}
-
-func (r *UserResource) Delete(c *fiber.Ctx) error {
-	id := c.Params("id")
-
-	if err := r.hooks.DeleteHook(c, id); err != nil {
-		return err
-	}
-
-	if err := r.crud.Delete(c.Context(), id); err != nil {
-		if crud.IsNotFoundError(err) {
-			return response.SendError(c, fiber.StatusNotFound, "user not found")
-		}
-		return response.SendError(c, fiber.StatusInternalServerError, "database error")
-	}
-
-	return c.SendStatus(fiber.StatusNoContent)
 }
