@@ -56,7 +56,7 @@ func AuthMiddleware(jwt JWTValidator, db database.Database) fiber.Handler {
 	}
 }
 
-func NewOptionalAuthMiddleware(jwt JWTValidator, db database.Database) fiber.Handler {
+func OptionalAuthMiddleware(jwt JWTValidator, db database.Database) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {

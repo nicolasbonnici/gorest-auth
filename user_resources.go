@@ -27,7 +27,7 @@ type UserResource struct {
 
 func RegisterUserRoutes(router fiber.Router, db database.Database, jwt *JWTService) {
 	authMiddleware := middleware.AuthMiddleware(jwt, db)
-	optionalAuth := middleware.NewOptionalAuthMiddleware(jwt, db)
+	optionalAuth := middleware.OptionalAuthMiddleware(jwt, db)
 
 	rbacConfig := GetRBACConfig()
 	userHooks := hooks.NewUserHooks(db, rbacConfig)
