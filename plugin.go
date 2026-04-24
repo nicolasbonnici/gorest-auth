@@ -2,6 +2,7 @@ package auth
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/nicolasbonnici/gorest-auth/middleware"
 	authmigrations "github.com/nicolasbonnici/gorest-auth/migrations"
 	"github.com/nicolasbonnici/gorest-auth/models"
@@ -39,6 +40,10 @@ func (p *AuthPlugin) Initialize(config map[string]interface{}) error {
 		p.config.JWTTTL = jwtTTL
 	}
 
+	if corsOrigins, ok := config["cors_origins"].(string); ok {
+		p.config.CORSOrigins = corsOrigins
+	}
+
 	p.jwt = NewJWTService(p.config.JWTSecret, p.config.JWTTTL)
 
 	return nil
@@ -52,6 +57,13 @@ func (p *AuthPlugin) SetupEndpoints(router fiber.Router) error {
 	if p.db == nil {
 		return nil
 	}
+
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     p.config.CORSOrigins,
+		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders:     "Content-Type,Authorization",
+		AllowCredentials: true,
+	}))
 
 	RegisterAuthRoutes(router, p.db, p.jwt)
 	RegisterUserRoutes(router, p.db, p.jwt)

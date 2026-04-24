@@ -83,6 +83,7 @@ plugins:
     config:
       jwt_secret: "${JWT_SECRET}"
       jwt_ttl: 900  # 15 minutes (in seconds)
+      cors_origins: "http://localhost:3000,https://yourdomain.com"  # CORS allowed origins
 
 # Migration configuration (GoREST 0.4+)
 migrations:

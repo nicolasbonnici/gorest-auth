@@ -6,14 +6,16 @@ import (
 )
 
 type Config struct {
-	Database  database.Database
-	JWTSecret string
-	JWTTTL    int
+	Database    database.Database
+	JWTSecret   string
+	JWTTTL      int
+	CORSOrigins string
 }
 
 func DefaultConfig() Config {
 	return Config{
-		JWTTTL: 900,
+		JWTTTL:      900,
+		CORSOrigins: "*",
 	}
 }
 

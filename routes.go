@@ -57,7 +57,7 @@ func handleRegister(db database.Database, userCRUD *crud.CRUD[models.User], jwt 
 		ctx := c.Context()
 
 		if err := checkEmailExists(ctx, db, req.Email, uuid.Nil); err != nil {
-			return err
+			return response.SendError(c, fiber.StatusBadRequest, err.Error())
 		}
 
 		password := req.Password
